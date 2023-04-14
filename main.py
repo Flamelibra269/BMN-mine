@@ -23,12 +23,12 @@ def train_BMN(data_loader, model, optimizer, epoch, bm_mask):
     epoch_tem_loss = 0
     epoch_loss = 0
     for n_iter, (input_data, label_confidence, label_start, label_end) in enumerate(data_loader):
-        input_data = input_data.cuda()
-        label_start = label_start.cuda()
-        label_end = label_end.cuda()
-        label_confidence = label_confidence.cuda()
+        input_data = input_data.cpu()
+        label_start = label_start.cpu()
+        label_end = label_end.cpu()
+        label_confidence = label_confidence.cpu()
         confidence_map, start, end = model(input_data)
-        loss = bmn_loss_func(confidence_map, start, end, label_confidence, label_start, label_end, bm_mask.cuda())
+        loss = bmn_loss_func(confidence_map, start, end, label_confidence, label_start, label_end, bm_mask.cpu())
         optimizer.zero_grad()
         loss[0].backward()
         optimizer.step()
@@ -54,13 +54,13 @@ def test_BMN(data_loader, model, epoch, bm_mask):
     epoch_tem_loss = 0
     epoch_loss = 0
     for n_iter, (input_data, label_confidence, label_start, label_end) in enumerate(data_loader):
-        input_data = input_data.cuda()
-        label_start = label_start.cuda()
-        label_end = label_end.cuda()
-        label_confidence = label_confidence.cuda()
+        input_data = input_data.cpu()
+        label_start = label_start.cpu()
+        label_end = label_end.cpu()
+        label_confidence = label_confidence.cpu()
 
         confidence_map, start, end = model(input_data)
-        loss = bmn_loss_func(confidence_map, start, end, label_confidence, label_start, label_end, bm_mask.cuda())
+        loss = bmn_loss_func(confidence_map, start, end, label_confidence, label_start, label_end, bm_mask.cpu())
 
         epoch_pemreg_loss += loss[2].cpu().detach().numpy()
         epoch_pemclr_loss += loss[3].cpu().detach().numpy()
@@ -84,7 +84,7 @@ def test_BMN(data_loader, model, epoch, bm_mask):
 
 def BMN_Train(opt):
     model = BMN(opt)
-    model = torch.nn.DataParallel(model, device_ids=[0, 1]).cuda()
+    model = torch.nn.DataParallel(model, device_ids=[0, 1]).cpu()
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=opt["training_lr"],
                            weight_decay=opt["weight_decay"])
 
@@ -106,8 +106,8 @@ def BMN_Train(opt):
 
 def BMN_inference(opt):
     model = BMN(opt)
-    model = torch.nn.DataParallel(model, device_ids=[0, 1]).cuda()
-    checkpoint = torch.load(opt["checkpoint_path"] + "/BMN_best.pth.tar")
+    model = torch.nn.DataParallel(model, device_ids=[0, 1]).cpu()
+    checkpoint = torch.load(opt["checkpoint_path"] + "/BMN_best.pth.tar" , map_location=torch.device('cpu'))
     model.load_state_dict(checkpoint['state_dict'])
     model.eval()
 
@@ -117,38 +117,40 @@ def BMN_inference(opt):
     tscale = opt["temporal_scale"]
     with torch.no_grad():
         for idx, input_data in test_loader:
-            video_name = test_loader.dataset.video_list[idx[0]]
-            input_data = input_data.cuda()
-            confidence_map, start, end = model(input_data)
+            if input_data != None:
+                video_name = test_loader.dataset.video_list[idx[0]]
+                input_data = input_data.cpu()
+                print(f"Predicting for video: {video_name}")
+                confidence_map, start, end = model(input_data)
 
-            # print(start.shape,end.shape,confidence_map.shape)
-            start_scores = start[0].detach().cpu().numpy()
-            end_scores = end[0].detach().cpu().numpy()
-            clr_confidence = (confidence_map[0][1]).detach().cpu().numpy()
-            reg_confidence = (confidence_map[0][0]).detach().cpu().numpy()
+                # print(start.shape,end.shape,confidence_map.shape)
+                start_scores = start[0].detach().cpu().numpy()
+                end_scores = end[0].detach().cpu().numpy()
+                clr_confidence = (confidence_map[0][1]).detach().cpu().numpy()
+                reg_confidence = (confidence_map[0][0]).detach().cpu().numpy()
 
-            
-            # 遍历起始分界点与结束分界点的组合
-            new_props = []
-            for idx in range(tscale):
-                for jdx in range(tscale):
-                    start_index = idx
-                    end_index = jdx + 1
-                    if start_index < end_index and  end_index<tscale :
-                        xmin = start_index / tscale
-                        xmax = end_index / tscale
-                        xmin_score = start_scores[start_index]
-                        xmax_score = end_scores[end_index]
-                        clr_score = clr_confidence[idx, jdx]
-                        reg_score = reg_confidence[idx, jdx]
-                        score = xmin_score * xmax_score * clr_score * reg_score
-                        new_props.append([xmin, xmax, xmin_score, xmax_score, clr_score, reg_score, score])
-            new_props = np.stack(new_props)
-            #########################################################################
+                
+                # 遍历起始分界点与结束分界点的组合
+                new_props = []
+                for idx in range(tscale):
+                    for jdx in range(tscale):
+                        start_index = idx
+                        end_index = jdx + 1
+                        if start_index < end_index and  end_index<tscale :
+                            xmin = start_index / tscale
+                            xmax = end_index / tscale
+                            xmin_score = start_scores[start_index]
+                            xmax_score = end_scores[end_index]
+                            clr_score = clr_confidence[idx, jdx]
+                            reg_score = reg_confidence[idx, jdx]
+                            score = xmin_score * xmax_score * clr_score * reg_score
+                            new_props.append([xmin, xmax, xmin_score, xmax_score, clr_score, reg_score, score])
+                new_props = np.stack(new_props)
+                #########################################################################
 
-            col_name = ["xmin", "xmax", "xmin_score", "xmax_score", "clr_score", "reg_socre", "score"]
-            new_df = pd.DataFrame(new_props, columns=col_name)
-            new_df.to_csv("./output/BMN_results/" + video_name + ".csv", index=False)
+                col_name = ["xmin", "xmax", "xmin_score", "xmax_score", "clr_score", "reg_socre", "score"]
+                new_df = pd.DataFrame(new_props, columns=col_name)
+                new_df.to_csv("./output/BMN_results/" + video_name + ".csv", index=False)
 
 
 def main(opt):
@@ -158,10 +160,10 @@ def main(opt):
         if not os.path.exists("output/BMN_results"):
             os.makedirs("output/BMN_results")
         BMN_inference(opt)
-        print("Post processing start")
-        BMN_post_processing(opt)
-        print("Post processing finished")
-        evaluation_proposal(opt)
+        # print("Post processing start")
+        # BMN_post_processing(opt)
+        # print("Post processing finished")
+        # evaluation_proposal(opt)
 
 
 if __name__ == '__main__':

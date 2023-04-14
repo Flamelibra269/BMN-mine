@@ -50,11 +50,15 @@ class VideoDataSet(data.Dataset):
 
     def _load_file(self, index):
         video_name = self.video_list[index]
-        video_df = pd.read_csv(self.feature_path + "csv_mean_" + str(self.temporal_scale) + "/" + video_name + ".csv")
-        video_data = video_df.values[:, :]
-        video_data = torch.Tensor(video_data)
-        video_data = torch.transpose(video_data, 0, 1)
-        video_data.float()
+        try:
+            video_df = pd.read_csv(self.feature_path + "csv_mean_" + str(self.temporal_scale) + "/" + video_name + ".csv")
+            video_data = video_df.values[:, :]
+            video_data = torch.Tensor(video_data)
+            video_data = torch.transpose(video_data, 0, 1)
+            video_data.float()
+        except FileNotFoundError as FNFE:
+            video_data = None
+        
         return video_data
 
     def _get_train_label(self, index, anchor_xmin, anchor_xmax):

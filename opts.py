@@ -42,11 +42,11 @@ def parse_opt():
     parser.add_argument(
         '--video_info',
         type=str,
-        default="data/activitynet_annotations/video_info_backup.csv")
+        default="data/activitynet_annotations/video_info_copy.csv")
     parser.add_argument(
         '--video_anno',
         type=str,
-        default="data/activitynet_annotations/anet_anno_action_backup.json")
+        default="data/activitynet_annotations/anet_anno_action.json")
     parser.add_argument(
         '--temporal_scale',
         type=int,
