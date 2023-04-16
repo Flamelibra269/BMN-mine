@@ -103,6 +103,11 @@ def BMN_Train(opt):
         train_BMN(train_loader, model, optimizer, epoch, bm_mask)
         test_BMN(test_loader, model, epoch, bm_mask)
 
+def gen_video_info(opt):
+    full_csv = pd.read_csv(opt["video_info"])
+    files = [file.split(".")[0] for file in  os.listdir(opt["feature_path"] + "csv_mean_100/")]
+    result_df = full_csv[full_csv["video"].isin(files)]
+    result_df.to_csv(opt["video_info_copy"], index=False)
 
 def BMN_inference(opt):
     model = BMN(opt)
@@ -111,7 +116,7 @@ def BMN_inference(opt):
     model.load_state_dict(checkpoint['state_dict'])
     model.eval()
 
-    test_loader = torch.utils.data.DataLoader(VideoDataSet(opt, subset="validation"),
+    test_loader = torch.utils.data.DataLoader(VideoDataSet(opt, subset=["validation" , "testing"]),
                                               batch_size=1, shuffle=False,
                                               num_workers=8, pin_memory=True, drop_last=False)
     tscale = opt["temporal_scale"]
@@ -153,16 +158,19 @@ def BMN_inference(opt):
                 new_df.to_csv("./output/BMN_results/" + video_name + ".csv", index=False)
 
 
+
+
 def main(opt):
     if opt["mode"] == "train":
         BMN_Train(opt)
     elif opt["mode"] == "inference":
         if not os.path.exists("output/BMN_results"):
             os.makedirs("output/BMN_results")
+        gen_video_info(opt)
         BMN_inference(opt)
-        # print("Post processing start")
-        # BMN_post_processing(opt)
-        # print("Post processing finished")
+        print("Post processing start")
+        BMN_post_processing(opt)
+        print("Post processing finished")
         # evaluation_proposal(opt)
 
 

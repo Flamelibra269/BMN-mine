@@ -14,7 +14,7 @@ def load_json(file):
 
 
 def getDatasetDict(opt):
-    df = pd.read_csv(opt["video_info"])
+    df = pd.read_csv(opt["video_info_copy"])
     json_data = load_json(opt["video_anno"])
     database = json_data
     video_dict = {}

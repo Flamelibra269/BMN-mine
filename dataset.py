@@ -20,7 +20,7 @@ class VideoDataSet(data.Dataset):
         self.subset = subset
         self.mode = opt["mode"]
         self.feature_path = opt["feature_path"]
-        self.video_info_path = opt["video_info"]
+        self.video_info_path = opt["video_info_copy"]
         self.video_anno_path = opt["video_anno"]
         self._getDatasetDict()
         self.anchor_xmin = [self.temporal_gap * (i - 0.5) for i in range(self.temporal_scale)]
@@ -34,7 +34,7 @@ class VideoDataSet(data.Dataset):
             video_name = anno_df.video.values[i]
             video_info = anno_database[video_name]
             video_subset = anno_df.subset.values[i]
-            if self.subset in video_subset:
+            if video_subset in self.subset:
                 self.video_dict[video_name] = video_info
         self.video_list = list(self.video_dict.keys())
         print("%s subset video numbers: %d" % (self.subset, len(self.video_list)))

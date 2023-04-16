@@ -42,6 +42,10 @@ def parse_opt():
     parser.add_argument(
         '--video_info',
         type=str,
+        default="data/activitynet_annotations/video_info_new.csv")
+    parser.add_argument(
+        '--video_info_copy',
+        type=str,
         default="data/activitynet_annotations/video_info_copy.csv")
     parser.add_argument(
         '--video_anno',
