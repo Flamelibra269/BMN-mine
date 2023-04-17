@@ -27,7 +27,7 @@ def getDatasetDict(opt):
         video_new_info["feature_frame"] = video_info['feature_frame']
         video_subset = df.subset.values[i]
         video_new_info['annotations'] = video_info['annotations']
-        if video_subset == 'validation':
+        if video_subset == 'validation' or video_subset == 'testing':
             video_dict[video_name] = video_new_info
     return video_dict
 
